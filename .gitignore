@@ -1,0 +1,17 @@
+# 运行产物：题目 JSON 可能含你的作业信息，不要提交
+answers/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 浏览器调试配置（含登录态）
+.chrome-*/
+ekwing-auto-profile/

@@ -1,0 +1,46 @@
+name: 新题型支持
+description: 某种题型没有被识别或答错，希望加上支持
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        新题型 PR 一般只需要：**加一个 JS_TASK_KIND 判定 + 一个 handler + 注册到 KIND_HANDLERS**。
+        详见 [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md)。
+  - type: input
+    id: taskname
+    attributes:
+      label: 题型名称
+      placeholder: 连线题
+    validations:
+      required: true
+  - type: input
+    id: biz
+    attributes:
+      label: biz 编号
+      description: `--list` 输出里那一列；不清楚可以留空
+      placeholder: "123"
+    validations:
+      required: false
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 现在的表现
+      description: 是"未识别的题型"，还是识别成 fill/choice 但答错了？
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: structure
+    attributes:
+      label: 页面结构（--inspect 输出）
+      description: 跑 `ekw.bat --url ... --inspect <任务名>`，贴 modelKeys / firstItem / dom 部分
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: willpr
+    attributes:
+      label: 是否愿意自己提 PR
+      options:
+        - label: 我愿意按 CONTRIBUTING 的步骤自己实现
