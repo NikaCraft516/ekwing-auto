@@ -1,0 +1,57 @@
+name: Bug 报告
+description: 某个环节没跑通（连不上、找不到卡片、作答失败等）
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先确认：`--list` 能列出任务、浏览器窗口一直开着、已登录翼课网。
+        请**不要**粘贴账号、密码、真实姓名或学校信息。
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象
+      description: 发生了什么？完整终端输出最好
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expect
+    attributes:
+      label: 期望
+      description: 你以为会发生什么
+    validations:
+      required: false
+  - type: input
+    id: command
+    attributes:
+      label: 执行的命令
+      placeholder: ekw.bat --url "https://www.ekwing.com/hw/do?hid=<ID>" --dry-run
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: 浏览器
+      options:
+        - Microsoft Edge
+        - Google Chrome
+        - Brave / 360 / QQ 等 Chromium 系
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      placeholder: Windows 11 / Python 3.12 / Edge 157
+    validations:
+      required: false
+  - type: textarea
+    id: inspect
+    attributes:
+      label: 相关任务的 --inspect 输出（可选）
+      description: 跑 `ekw.bat --url ... --inspect <任务名>`，把 answers/inspect_*.json 里与结构有关的部分贴上，注意脱敏
+      render: json
+    validations:
+      required: false
