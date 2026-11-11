@@ -1,0 +1,17 @@
+{
+ "vid": "ms-btk.do.choice34828148",
+ "panelText": "语法选择 1. Which word is a noun? ABCD 2. Choose the correct form. ABCD 3. Pick the best answer. ABCD 4. What does the passage say? ABCD 完成",
+ "modelKeys": "qus_items,ansData,allData,key,kind",
+ "itemCount": 4,
+ "firstItem": "{\"id\":\"477880001\",\"answer\":\"[\\\"B\\\"]\",\"orders\":\"1\",\"ask\":[]}",
+ "ansSample": "{\"477880001\":{\"ans\":\"\"},\"477880002\":{\"ans\":\"\"},\"477880003\":{\"ans\":\"\"},\"477880004\":{\"ans\":\"\"}}",
+ "dom": {
+  "jsDoHwFill": 0,
+  "radios": 16,
+  "textInputs": 0,
+  "textareas": 0,
+  "selects": 0
+ },
+ "htmlHint": "<div class=\"choicebox\"><h2>语法选择</h2><div class=\"q\"><p>1. Which word is a noun?</p><div class=\"opts\"><label><input type=\"radio\" name=\"choice_477880001\" value=\"A\">A</label><label><input type=\"radio\" name=\"choice_477880001\" value=\"B\">B</label><label><input type=\"radio\" name=\"choice_477880001\" value=\"C\">C</label><label><input type=\"radio\" name=\"choice_477880001\" value=\"D\">D</label></div></div><div class=\"q\"><p>2. Choose the correct form.</p><div class=\"opts\"><label><input type=\"radio\" name=\"choice_477880002\" value=\"A\">A</label><label><input type=\"radio\" name=\"choice_477880002\" value=\"B\">B</label><label><input type=\"radio\" name=\"choice_477880002\" value=\"C\">C</label><label><input type=\"radio\" name=\"choice_477880002\" value=\"D\">D</label></div></div><div class=\"q\"><p>3. Pick the best answer.</p><di",
+ "kind": "choice"
+}

@@ -1,0 +1,49 @@
+{
+ "errno": 0,
+ "data": [
+  {
+   "content": [
+    {
+     "content": "用括号中词语的正确形式或适当的词填空。"
+    }
+   ],
+   "question": {
+    "qus_item": [
+     {
+      "id": "3098106",
+      "orders": "1",
+      "ask": [
+       {
+        "content": "In the past, it felt s### to see robots serving food."
+       }
+      ],
+      "answer": "[\"strange\"]",
+      "analyz": "mock"
+     },
+     {
+      "id": "3098107",
+      "orders": "2",
+      "ask": [
+       {
+        "content": "Can you g### when I started using a digital device?"
+       }
+      ],
+      "answer": "[\"guess\"]",
+      "analyz": "mock"
+     },
+     {
+      "id": "3098108",
+      "orders": "3",
+      "ask": [
+       {
+        "content": "Students are using AI to help with their h###."
+       }
+      ],
+      "answer": "[\"homework\"]",
+      "analyz": "mock"
+     }
+    ]
+   }
+  }
+ ]
+}

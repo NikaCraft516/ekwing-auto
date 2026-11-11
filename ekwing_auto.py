@@ -22,7 +22,7 @@
 
 前置条件
 --------
-1. 用 start-chrome.bat 启动一个带调试端口的 Chrome，并登录翼课网；
+1. 用 browser.bat 启动一个带调试端口的浏览器，并登录翼课网；
 2. 用本目录的 python 运行（见 README）。
 """
 
@@ -42,6 +42,7 @@ SPEECH_BIZ = {
     "008": "读记目标句",
     "525": "课文背诵",
     "002": "课文跟读",
+    "003": "对话跟读",
 }
 SPEECH_NAMES = set(SPEECH_BIZ.values())
 
@@ -202,17 +203,25 @@ JS_TASK_KIND = r"""
 })(%s)
 """
 
-# 选择题：正确答案在 VM 的 qus_items[].answer，选项是 input[name=choice_<qid>][value=A-D]
-JS_CHOICE_ITEMS = r"""
+# 选择题：正确答案在接口的 qus_item[].answer（原始选项字母），页面上是
+# input[name=choice_<qid>][value=A-D]。注意平台每次进入都会打乱选项顺序，
+# 页面上的 value 是「显示顺序」的字母，所以这里读出每个选项的正文用于匹配。
+JS_CHOICE_OPTIONS = r"""
 (function(vid){
   var vm=avalon.vmodels[vid];
   if(!vm || !vm.qus_items) return null;
-  var items=vm.qus_items.map(function(q){
-    var a='';
-    try { a = JSON.parse(q.answer)[0]; } catch(e) { a = (q.answer||'').replace(/["\[\]]/g,''); }
-    return {id:q.id, answer:a};
+  var out=[];
+  vm.qus_items.forEach(function(q){
+    var opts=[];
+    var rs=document.querySelectorAll('input[name="choice_'+q.id+'"]');
+    for(var i=0;i<rs.length;i++){
+      var r=rs[i];
+      var box=(r.closest && r.closest('label')) || r.parentElement || r;
+      opts.push({v:r.value, t:(box.textContent||'').replace(/\s+/g,' ').trim()});
+    }
+    out.push({id:q.id, opts:opts});
   });
-  return {vid:vid, items:items};
+  return out;
 })(%s)
 """
 
@@ -261,14 +270,26 @@ JS_HAS_PANEL = r"""
 
 JS_CLICK_TEXT = r"""(function(t){
   var scope=document.getElementById('jsDoWorkCompContainer') || document.body;
-  var els=scope.querySelectorAll('a,button,div,span');
+  var els=scope.querySelectorAll('a,button,div,span,li,p,i,em');
+  var best=null, bestScore=-1;
   for(var i=0;i<els.length;i++){
     var e=els[i];
     if((e.textContent||'').replace(/\s+/g,'')!==t) continue;
     var r=e.getBoundingClientRect();
-    if(r.width>10 && r.height>8){ e.click(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+    if(r.width<=10 || r.height<=8) continue;
+    // 打分：可点击元素优先，最内层优先，面积越小越像按钮。
+    // 不加这一步会点到外层同文本容器（如 <div class="foot"><a>完成</a></div>），
+    // 点了没有反应，弹窗不出来，最后等级读成 "?"。
+    var s=0;
+    if(e.tagName==='A' || e.tagName==='BUTTON') s+=4;
+    if(!e.children.length) s+=2;
+    s-=Math.min(2, Math.floor((r.width*r.height)/200000));
+    if(s>bestScore){ bestScore=s; best=e; }
   }
-  return null;
+  if(!best) return null;
+  var rr=best.getBoundingClientRect();
+  best.click();
+  return {x:rr.left+rr.width/2, y:rr.top+rr.height/2};
 })(%s)
 """
 
@@ -386,7 +407,7 @@ def fetch_content(c, key, param_term=DEFAULT_PARAM_TERM):
 
 
 def extract_items(data):
-    """从接口返回里抽出题目列表：[{id, ask, answers, analyz, context}]"""
+    """从接口返回里抽出题目列表：[{id, ask, answers, options, analyz, context}]"""
     items = []
     for block in data.get("data") or []:
         # 对话/语篇类题目：题干在这个 content 里，qus_item 的 ask 可能是空的
@@ -397,11 +418,20 @@ def extract_items(data):
         q = block.get("question") or {}
         for it in q.get("qus_item") or []:
             ask = " ".join(str(a.get("content", "")) for a in it.get("ask") or [])
+            # 选项正文：answers 里的字母指的是「原始选项」，需要靠正文映射到页面上的位置
+            opts = []
+            for opt in it.get("items") or []:
+                if not isinstance(opt, dict):
+                    continue
+                txt = " ".join(str(p.get("content", ""))
+                               for p in opt.get("content") or [] if isinstance(p, dict))
+                opts.append({"key": opt.get("key"), "text": txt.strip()})
             items.append({
                 "id": it.get("id"),
                 "orders": it.get("orders"),
                 "ask": ask.strip(),
                 "context": ctx.strip(),
+                "options": opts,
                 "raw_answer": it.get("answer"),
                 "answers": parse_answer(it.get("answer")),
                 "analyz": it.get("analyz", ""),
@@ -462,19 +492,45 @@ def solve_task(c, name, items, dry=False):
     return handler(c, vid, items, dry)
 
 
+def _norm_opt(s):
+    """选项文本归一化：去掉 "A." 前缀、大小写和标点。"""
+    s = (s or "").lower()
+    s = re.sub(r"^[a-e]\s*[\.\、\)）：:]\s*", "", s)
+    return re.sub(r"[^a-z0-9\u4e00-\u9fa5]", "", s)
+
+
 def _do_choice(c, vid, items=None, dry=False):
-    """选择题：按 VM 里的 answer 点对应 radio。"""
-    data = c.eval(JS_CHOICE_ITEMS % json.dumps(vid))
-    if not data:
+    """选择题：平台会打乱选项，所以用「答案正文」映射到页面上的显示位置。"""
+    dom = c.eval(JS_CHOICE_OPTIONS % json.dumps(vid))
+    if not dom:
         return {"ok": False, "msg": "没读到选择题模型"}
-    items = data["items"]
-    log("  · %d 道选择题，答案：%s" % (len(items), " ".join(i["answer"] for i in items)))
+    api = {it.get("id"): it for it in (items or [])}
+    plan = []
+    for q in dom:
+        it = api.get(q["id"]) or {}
+        answers = it.get("answers") or []
+        target = answers[0] if answers else ""
+        value = None
+        # 1) 有选项正文时按正文匹配（answer 是原始选项字母，页面上已重排）
+        want = next((o.get("text") for o in it.get("options") or []
+                     if o.get("key") == target and o.get("text")), "")
+        if want:
+            nw = _norm_opt(want)
+            for o in q["opts"]:
+                if _norm_opt(o["t"]) == nw:
+                    value = o["v"]
+                    break
+        # 2) 判断题这类没有选项正文的，答案本身就是 T/F，直接按字母点
+        if value is None:
+            value = target
+        plan.append((q["id"], target, value))
+    log("  · %d 道选择题，答案：%s" % (len(plan), " ".join(p[2] or "?" for p in plan)))
     if dry:
         return {"ok": True, "msg": "dry-run，未作答"}
-    for it in items:
-        ok = c.eval(JS_CLICK_CHOICE % (json.dumps(it["id"]), json.dumps(it["answer"])))
+    for qid, target, value in plan:
+        ok = c.eval(JS_CLICK_CHOICE % (json.dumps(qid), json.dumps(value)))
         if not ok:
-            log("    ! 题目 %s 找不到选项 %s" % (it["id"], it["answer"]))
+            log("    ! 题目 %s 找不到选项 %s" % (qid, value))
         time.sleep(0.15)
     done = c.eval(JS_CHOICE_DONE % json.dumps(vid)) or {}
     log("  · 已答 %s/%s 题" % (done.get("answered"), done.get("total")))
@@ -563,18 +619,28 @@ KIND_HANDLERS = {
 
 
 def submit(c):
-    """点完成 → 确定，读回等级。"""
+    """点完成 → 确定，读回等级（部分题型只给分数）。"""
     if not click_text(c, "完成", wait=2.5):
         return {"ok": False, "msg": "找不到完成按钮"}
     if not click_text(c, "确定", wait=4.0):
         log("  · 没出现确认弹窗（可能直接提交了）")
     time.sleep(3)
     txt = (c.eval(JS_PANEL_TEXT) or "").replace("\n", " ")
-    m = re.search(r"等级[:：]\s*([A-E])", txt)
-    grade = m.group(1) if m else "?"
     m2 = re.search(r"用时[:：]\s*([0-9分秒]+)", txt)
     used = m2.group(1) if m2 else ""
-    return {"ok": True, "grade": grade, "used": used, "msg": txt[:80]}
+    m = re.search(r"等级[:：]\s*([A-E])", txt)
+    if m:
+        return {"ok": True, "grade": m.group(1), "used": used, "msg": txt[:80]}
+    # 词语听写这类题型的结果页只有「分数 + 答案对照表」，没有等级：
+    #   "词语听写 100 00:00:11 绿色是正确答案，红色是错误答案 序号 我的答案 正确答案 …"
+    ms = re.search(r"(?:得分|分数|成绩)[:：]?\s*([0-9]{1,3})", txt)
+    if not ms:
+        ms = re.search(r"([0-9]{1,3})\s+[0-9]{2}:[0-9]{2}", txt)
+    if ms and ("我的答案" in txt or "正确答案" in txt or "得分" in txt):
+        return {"ok": True, "score": ms.group(1), "used": used, "msg": txt[:80]}
+    # 两种结果页都没认出来，多半是没点中「完成 / 确定」，不能当成功——
+    # 否则汇总里只会看到「等级 ?」，退出码却是 0，失败被静默吞掉。
+    return {"ok": False, "msg": "提交后没读到结果（可能没点中完成/确定）：%s" % txt[:60]}
 
 
 # --------------------------------------------------------------------------
@@ -583,6 +649,7 @@ def submit(c):
 def list_tasks(c):
     js = r"""
     (function(){
+      if(typeof avalon==='undefined' || !avalon.vmodels) return null;
       var vm = avalon.vmodels['hwCntVm'];
       if(!vm || !vm.list) return null;
       return vm.list.map(function(it){
@@ -667,7 +734,7 @@ def main():
         c = cdp_mod.CDP()
     except Exception as e:
         log("！连不上 Chrome 调试端口 %d：%s" % (args.port, e))
-        log("  请先双击 start-chrome.bat 打开浏览器并登录翼课网，保持它开着再运行本工具。")
+        log("  请先双击 browser.bat 打开浏览器并登录翼课网，保持它开着再运行本工具。")
         return 4
     try:
         c.goto(url, wait=8)
@@ -732,7 +799,12 @@ def main():
                 r = solve_task(c, name, items, args.dry_run)
 
             if r.get("ok"):
-                msg = "等级 %s" % r.get("grade", "-") if r.get("grade") else r.get("msg", "完成")
+                if r.get("grade"):
+                    msg = "等级 %s" % r["grade"]
+                elif r.get("score"):
+                    msg = "得分 %s" % r["score"]
+                else:
+                    msg = r.get("msg", "完成")
             else:
                 msg = "失败：" + r.get("msg", "?")
             results.append((name, msg))

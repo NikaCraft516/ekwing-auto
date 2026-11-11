@@ -1,0 +1,60 @@
+{
+ "errno": 0,
+ "data": [
+  {
+   "content": [
+    {
+     "content": "阅读下列句子，选出最佳答案。"
+    }
+   ],
+   "question": {
+    "qus_item": [
+     {
+      "id": "477880001",
+      "orders": "1",
+      "ask": [
+       {
+        "content": "Which word is a noun?"
+       }
+      ],
+      "answer": "[\"B\"]",
+      "analyz": "mock"
+     },
+     {
+      "id": "477880002",
+      "orders": "2",
+      "ask": [
+       {
+        "content": "Choose the correct form."
+       }
+      ],
+      "answer": "[\"A\"]",
+      "analyz": "mock"
+     },
+     {
+      "id": "477880003",
+      "orders": "3",
+      "ask": [
+       {
+        "content": "Pick the best answer."
+       }
+      ],
+      "answer": "[\"C\"]",
+      "analyz": "mock"
+     },
+     {
+      "id": "477880004",
+      "orders": "4",
+      "ask": [
+       {
+        "content": "What does the passage say?"
+       }
+      ],
+      "answer": "[\"D\"]",
+      "analyz": "mock"
+     }
+    ]
+   }
+  }
+ ]
+}

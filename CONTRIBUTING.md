@@ -9,7 +9,8 @@
 |---|---|
 | `ekwing_auto.py` | 全部逻辑：枚举任务、取题、识别题型、作答、提交 |
 | `cdp.py` | 极简 CDP 客户端（WebSocket 帧 + HTTP），一般不用改 |
-| `start-browser.bat` | 启动可控浏览器（Edge/Chrome 自动探测） |
+| `browser.bat` | 启动可控浏览器（Edge/Chrome 自动探测、端口复用与清理） |
+| `show-browser.ps1` | 把窗口从最小化唤到前台，`browser.bat` 调用 |
 | `ekw.bat` | 运行入口（找 Python、设端口和编码） |
 | `samples/` | 示例题目 JSON，用于 `--offline` 演示 |
 | `answers/` | 运行时产物，**已在 .gitignore 中，不要提交** |
@@ -19,7 +20,7 @@
 ```
 list_tasks()      读 hwCntVm.list 得到 [{name, biz, key}]
 fetch_content()   POST /proxy 取题目与答案
-extract_items()   把 qus_item[] 规整成 [{id, ask, answers}]
+extract_items()   把 qus_item[] 规整成 [{id, ask, answers, options}]
 solve_task()      open_tile → start_task → 锁定新出现的模型 → JS_TASK_KIND 判题型
 KIND_HANDLERS     按 kind 分发到 _do_fill / _do_choice
 submit()          点「完成 → 确定」，读回等级
@@ -78,6 +79,14 @@ KIND_HANDLERS = {
 - 返回 `{"ok": True, "grade": "A"}` 或 `{"ok": False, "msg": "原因"}`；
 - `dry=True` 时**绝对不能**写答案或点提交，只做读取与校验；
 - 失败信息写清楚"哪一题、什么现象"，不要只抛异常。
+
+### 选项乱序（选择题必看）
+
+接口里的 `answer` 是**原始选项**的字母，但页面每次进入都会打乱顺序，radio 的 `value`
+是**显示顺序**的字母，两者对不上。不要 `[value="答案字母"]` 直接点，正确姿势见
+`_do_choice`：用 `items[].options` 取出答案正文，再用 `_norm_opt()` 归一化后在页面上
+找文本相同的选项，点它的 `value`。判断题（T/F）没有选项正文，答案本身就是 `T`/`F`，
+可以直接按字母点。
 
 ## 调试技巧
 

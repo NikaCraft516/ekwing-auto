@@ -1,0 +1,15 @@
+{
+ "errno": 0,
+ "data": [
+  {
+   "content": [
+    {
+     "content": "听录音，写出你听到的单词。"
+    }
+   ],
+   "question": {
+    "qus_item": []
+   }
+  }
+ ]
+}
