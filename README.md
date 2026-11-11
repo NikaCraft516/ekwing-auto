@@ -186,6 +186,8 @@ ekwing-auto/
 └─ answers/           运行时保存的题目 JSON（.gitignore）
 ```
 
+> 每个文件具体做什么、什么时候需要改，见 **[FILES.md](FILES.md)**。
+
 ## ❓ FAQ
 
 **Q：提示"连不上 Chrome 调试端口"？**
